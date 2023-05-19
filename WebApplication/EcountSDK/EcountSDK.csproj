@@ -82,7 +82,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\WindowsFormsApp1\ECount.CoreBase\ECount.CoreBase.csproj">
+    <ProjectReference Include="..\ECount.CoreBase\ECount.CoreBase.csproj">
       <Project>{4f251d4b-de09-450d-aa70-1563c1702ab4}</Project>
       <Name>ECount.CoreBase</Name>
     </ProjectReference>

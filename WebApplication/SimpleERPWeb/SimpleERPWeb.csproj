@@ -204,13 +204,13 @@
     <Content Include="Scripts\jquery-3.3.1.min.map" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\EcountSDK\EcountSDK.csproj">
-      <Project>{0b0a323c-0421-4aaf-8034-11ecd6e6c24e}</Project>
-      <Name>EcountSDK</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\WindowsFormsApp1\ECount.CoreBase\ECount.CoreBase.csproj">
+    <ProjectReference Include="..\ECount.CoreBase\ECount.CoreBase.csproj">
       <Project>{4f251d4b-de09-450d-aa70-1563c1702ab4}</Project>
       <Name>ECount.CoreBase</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\EcountSDK\EcountSDK.csproj">
+      <Project>{0b0a323c-0421-4aaf-8034-11ecd6e6c24e}</Project>
+      <Name>EcountSDK</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
