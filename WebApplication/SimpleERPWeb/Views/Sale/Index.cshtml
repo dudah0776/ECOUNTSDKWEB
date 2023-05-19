@@ -1,0 +1,299 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>판매</h2>
+<label>품목 코드</label>
+@Html.DropDownList("ProductCode", new SelectList(@ViewBag.prodlistinfo))
+<br />
+<label>수량</label>
+<input id="quantity" />
+<br />
+<label>거래처 코드</label>
+@Html.DropDownList("CustomerCode", new SelectList(@ViewBag.custlistinfo))
+<br />
+<label>날짜</label>
+<input type="date" id="date" />
+<br />
+<button id="purchaseInsert" onclick="pur_insert()">저장</button>
+<br />
+<div>
+    <label>품목 코드: </label>
+    <input id="pCodeSearch" />
+    <label>거래처 코드: </label>
+    <input id="cCodeSearch" />
+    <button id="purSearch" onclick="pur_search()">검색</button>
+</div>
+<br />
+<div id="tableContainer">
+    <table id="prodtable" border="1" width="50%">
+        <thead>
+            <tr align="center">
+                <th>거래 번호</th>
+                <th>품목 코드</th>
+                <th>거래처 코드</th>
+                <th>수량</th>
+                <th>날짜</th>
+                <th>수정/삭제</th>
+            </tr>
+        </thead>
+        <tbody id="purchasetableBody">
+            @foreach (var item in ViewBag.salelist)
+            {
+                <tr align="center">
+                    <td>@item.sid</td>
+                    <td>@item.Product.Code</td>
+                    <td>@item.customer.Code</td>
+                    <td>@item.Quantity</td>
+                    <td>@item.date.ToString("yyyy-MM-dd")</td>
+                    <td>
+                        <a href="#" class="open-modal"
+                           data-sid="@item.sid"
+                           data-pcode="@item.Product.Code"
+                           data-ccode="@item.customer.Code"
+                           data-quantity="@item.Quantity"
+                           data-date="@item.date">수정/삭제</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- 모달 -->
+<div id="modal" style="display: none;">
+    <div id="modal-content">
+        <p>
+            <label>품목 코드</label>
+            @Html.DropDownList("modal-ProductCode", new SelectList(@ViewBag.prodlistinfo))
+        </p>
+        <p><label>수량:</label> <input id="modal-quantity" /></p>
+        <p>
+            <label>거래처 코드</label>
+            @Html.DropDownList("modal-CustomerCode", new SelectList(@ViewBag.custlistinfo))
+        </p>
+        <p>
+            <label>날짜</label>
+            <input type="date" id="modal-date" />
+        </p>
+        <input type="hidden" id="modal-sid" value="" />
+        <button id="close-modal-button">닫기</button>
+        <button id="modify-modal-button" onclick="pur_modify()">수정</button>
+        <button id="delete-modal-button" onclick="pur_delete()">삭제</button>
+    </div>
+</div>
+
+<script>
+    //컨트롤러 url의 반환 값을 table로 생성하는 함수
+    function updateTable(url) {
+        $.ajax({
+            url: url, // 서버의 액션 메서드 경로
+            type: 'GET',
+            success: function (response) {
+                changeTable(response);
+            },
+            error: function (xhr, status, error) {
+                console.error(error);
+            }
+        });
+    }
+
+    function changeTable(productList) {
+        var tableBody = document.getElementById("purchasetableBody");
+        tableBody.innerHTML = "";
+        productList.forEach(function (item) {
+            var row = tableBody.insertRow();
+            var sidCell = row.insertCell();
+            var PcodeCell = row.insertCell();
+            var CcodeCell = row.insertCell();
+            var quantityCell = row.insertCell();
+            var dateCell = row.insertCell();
+            var actionCell = row.insertCell();
+
+            sidCell.textContent = item.sid;
+            PcodeCell.textContent = item.Product.Code;
+            CcodeCell.textContent = item.customer.Code;
+            quantityCell.textContent = item.Quantity;
+            dateCell.textContent = JsonDateParse(item.date);
+
+            var link = document.createElement("a");
+            link.href = "#";
+            link.classList.add("open-modal");
+            link.dataset.sid = item.sid;
+            link.dataset.quantity = item.Quantity;
+            link.textContent = "수정/삭제";
+            actionCell.appendChild(link);
+        });
+        // 모달 창 열기 이벤트 핸들러
+        var modalLinks = document.getElementsByClassName("open-modal");
+        for (var i = 0; i < modalLinks.length; i++) {
+            modalLinks[i].addEventListener("click", function (e) {
+                e.preventDefault();
+                var sid = this.dataset.sid;
+                var quantity = this.dataset.quantity;
+                openModal(sid, quantity);
+            });
+        }
+    }
+    function pur_search() {
+        var searchPcode = document.getElementById('pCodeSearch').value;
+        var searchCcode = document.getElementById('cCodeSearch').value;
+
+        $.ajax({
+            url: '/Sale/GetSearchedList', //request 보낼 서버의 경로
+            dataType: 'json',
+            method: 'post', // 메소드(get, post, put 등)
+            data: {
+                pCode: searchPcode,
+                cCode: searchCcode
+            }, //보낼 데이터
+            success: function (response) {
+                changeTable(response);
+            },
+            error: function (err) {
+                alert("검색 실패");
+                //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+            }
+        });
+    }
+    function pur_insert() {
+        var productDropdown = document.getElementById("ProductCode");
+        var prodinfo = productDropdown.options[productDropdown.selectedIndex].value;
+        var customerDropdown = document.getElementById("CustomerCode");
+        var custinfo = customerDropdown.options[customerDropdown.selectedIndex].value;
+        //수량
+        var quantity = document.getElementById('quantity').value;
+        //날짜
+        var dateField = document.getElementById("date");
+        var selectedDate = dateField.value;
+        if (quantity != '' && selectedDate) {
+            var formattedDate = new Date(selectedDate).toISOString().split('T')[0];
+            var splittedProd = prodinfo.split(' ');
+            var prodCode = splittedProd[0];
+            var splittedCust = custinfo.split(' ');
+            var CustCode = splittedCust[0];
+            var purchase = {
+                'product': { 'Code': prodinfo, 'Name': '', 'Type': '' },
+                'customer': { 'Code': custinfo, 'Name': '' },
+                'quantity': quantity,
+                'date': formattedDate
+            };
+
+            $.ajax({
+                url: '/Sale/InsertExec', //request 보낼 서버의 경로
+                dataType: 'json',
+                method: 'post', // 메소드(get, post, put 등)
+                data: JSON.stringify(purchase),
+                contentType: 'application/json',
+                success: function (data) {
+                    alert("판매 등록 완료");
+                    updateTable('/Sale/GetSaleList');
+                },
+                error: function (err) {
+                    alert("거래처 등록 실패" + err);
+                    //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+                }
+            });
+        }
+    }
+
+    function pur_modify() {
+        if (confirm("수정 하시겠습니까?")) {
+            var sid = document.getElementById("modal-sid").value;
+            var productDropdown = document.getElementById("modal-ProductCode");
+            var prodinfo = productDropdown.options[productDropdown.selectedIndex].value;
+            var customerDropdown = document.getElementById("modal-CustomerCode");
+            var custinfo = customerDropdown.options[customerDropdown.selectedIndex].value;
+            //수량
+            var quantity = document.getElementById('modal-quantity').value;
+            //날짜
+            var dateField = document.getElementById("modal-date");
+            var selectedDate = dateField.value;
+            if (quantity != '' && selectedDate) {
+                var formattedDate = new Date(selectedDate).toISOString().split('T')[0];
+                var splittedProd = prodinfo.split(' ');
+                var prodCode = splittedProd[0];
+                var splittedCust = custinfo.split(' ');
+                var CustCode = splittedCust[0];
+                var pData = {
+                    'sid': sid,
+                    'product': { 'Code': prodinfo, 'Name': '', 'Type': '' },
+                    'customer': { 'Code': custinfo, 'Name': '' },
+                    'quantity': quantity,
+                    'date': formattedDate
+                };
+                $.ajax({
+                    url: '/Sale/ModifySale', //request 보낼 서버의 경로
+                    dataType: 'json',
+                    method: 'post', // 메소드(get, post, put 등)
+                    data: JSON.stringify(pData),
+                    contentType: 'application/json',
+                    success: function (data) {
+                        alert("구매 수정 완료");
+                        updateTable('/Sale/GetSaleList');
+                        closeModal();
+                    },
+                    error: function (err) {
+                        alert("수정 실패" + err);
+                        //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+                    }
+                });
+            }
+        }
+    }
+
+    function pur_delete() {
+        if (confirm("삭제 하시겠습니까?")) {
+            var sid = document.getElementById("modal-sid").value;
+            console.log(sid);
+            $.ajax({
+                url: '/Sale/DeleteSale', //request 보낼 서버의 경로
+                dataType: 'json',
+                method: 'post', // 메소드(get, post, put 등)
+                data: {
+                    sid: sid
+                }, //보낼 데이터
+                success: function (data) {
+                    alert("삭제 완료");
+                    updateTable('/Sale/GetSaleList');
+                    closeModal();
+
+                },
+                error: function (err) {
+                    alert("삭제 실패" + err);
+                    //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+                }
+            });
+        }
+    }
+    // 모달 열기
+    function openModal(sid, quantity) {
+        var modalQuantity = document.getElementById("modal-quantity");
+        modalQuantity.value = quantity;
+        var modalSid = document.getElementById("modal-sid");
+        modalSid.value = sid;
+        var modal = document.getElementById("modal");
+        modal.style.display = "block";
+    }
+
+    // 모달 닫기
+    function closeModal() {
+        var modal = document.getElementById("modal");
+        modal.style.display = "none";
+    }
+
+    // 모달 창 열기 이벤트 핸들러
+    var modalLinks = document.getElementsByClassName("open-modal");
+    for (var i = 0; i < modalLinks.length; i++) {
+        modalLinks[i].addEventListener("click", function (e) {
+            e.preventDefault();
+            var sid = this.dataset.sid;
+            var quantity = this.dataset.quantity;
+            openModal(sid, quantity);
+        });
+    }
+    // 모달 닫기 버튼 클릭 이벤트 처리
+    var closeModalButton = document.getElementById("close-modal-button");
+    closeModalButton.addEventListener("click", closeModal);
+</script>

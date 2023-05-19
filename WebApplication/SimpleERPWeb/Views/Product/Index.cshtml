@@ -1,0 +1,261 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+<h2>품목</h2>
+<br />
+<label>품목 코드</label>
+<input id="code" />
+<br />
+<label>품목명</label>
+<input id="name" />
+<br />
+<label>구분</label>
+@Html.DropDownList("type", new SelectList(@ViewBag.prodType))
+<br />
+<button id="prodInsert" onclick="prod_insert()">저장</button>
+<br />
+<br />
+<div>
+    <label>코드: </label>
+    <input id="codeSearch" />
+    <label>구분: </label>
+    <input id="typeSearch" />
+    <button id="prodSearch" onclick="prod_search()">검색</button>
+</div>
+
+<div id="tableContainer">
+    <table id="prodtable" border="1" width="50%">
+        <thead>
+            <tr align="center">
+                <th>품목코드</th>
+                <th>품목명</th>
+                <th>구분</th>
+                <th>수정/삭제</th>
+            </tr>
+        </thead>
+        <tbody id="prodtableBody">
+            @foreach (var item in ViewBag.prodlist)
+            {
+                <tr align="center">
+                    <td>@item.Code</td>
+                    <td>@item.Name</td>
+                    <td>@item.Type</td>
+                    <td>
+                        <a href="#" class="open-modal"
+                           data-id="@item.Code"
+                           data-name="@item.Name"
+                           data-type="@item.Type">수정/삭제</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+
+<!-- 모달 -->
+<div id="modal" style="display: none;">
+    <div id="modal-content">
+        <p><label>코드:</label> <span id="modal-code"></span></p>
+        <p><label>이름:</label> <input id="modal-name" /></p>
+        <p>
+            <label>구분:</label>            
+            @Html.DropDownList("modal-type", new SelectList(@ViewBag.prodType))
+        </p>
+        <button id="close-modal-button">닫기</button>
+        <button id="modify-modal-button" onclick="prod_modify()">수정</button>
+        <button id="delete-modal-button" onclick="prod_delete()">삭제</button>
+    </div>
+</div>
+
+
+<br><br><br><br><br><br><br><br><br><br>
+
+
+
+<script>
+    //컨트롤러 url의 반환 값을 table로 생성하는 함수
+    function updateTable(url) {
+        $.ajax({
+            url: url, // 서버의 액션 메서드 경로
+            type: 'GET',
+            success: function (response) {
+                changeTable(response);
+            },
+            error: function (xhr, status, error) {
+                console.error(error);
+            }
+        });
+    }
+    function changeTable(productList) {
+        var tableBody = document.getElementById("prodtableBody");
+        tableBody.innerHTML = "";
+        productList.forEach(function (item) {
+            var row = tableBody.insertRow();
+            var codeCell = row.insertCell();
+            var nameCell = row.insertCell();
+            var typeCell = row.insertCell();
+            var actionCell = row.insertCell();
+
+            codeCell.textContent = item.Code;
+            nameCell.textContent = item.Name;
+            typeCell.textContent = item.Type;
+
+            var link = document.createElement("a");
+            link.href = "#";
+            link.classList.add("open-modal");
+            link.dataset.id = item.Code;
+            link.dataset.name = item.Name;
+            link.dataset.type = item.Type;
+            link.textContent = "수정/삭제";
+            actionCell.appendChild(link);
+        });
+        // 모달 창 열기 이벤트 핸들러
+        var modalLinks = document.getElementsByClassName("open-modal");
+        for (var i = 0; i < modalLinks.length; i++) {
+            modalLinks[i].addEventListener("click", function (e) {
+                e.preventDefault();
+                var id = this.dataset.id;
+                var name = this.dataset.name;
+                var type = this.dataset.type;
+                openModal(id, name, type);
+            });
+        }
+    }
+    function prod_insert() {
+        var code = document.getElementById('code').value;
+        var name = document.getElementById('name').value;
+        var type = document.getElementById('type').value;
+        console.log(code + name + type);
+        if (code != "" && name != "" && type != "") {
+            $.ajax({
+                url: '/Product/InsertExec', //request 보낼 서버의 경로
+                dataType: 'json',
+                method: 'post', // 메소드(get, post, put 등)
+                data: {
+                    Code: code,
+                    Name: name,
+                    Type: type
+                }, //보낼 데이터
+                success: function (data) {
+                    alert("품목 등록 완료");
+                    updateTable('/Product/GetProductList');
+                },
+                error: function (err) {
+                    alert("품목 등록 실패" + err);
+                    //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+                }
+            });
+        }
+    }
+    function prod_search() {
+        var searchCode = document.getElementById('codeSearch').value;
+        var searchType = document.getElementById('typeSearch').value;
+
+        $.ajax({
+            url: '/Product/GetSearchedList', //request 보낼 서버의 경로
+            dataType: 'json',
+            method: 'post', // 메소드(get, post, put 등)
+            data: {
+                code: searchCode,
+                type: searchType
+            }, //보낼 데이터
+            success: function (response) {
+                changeTable(response);
+            },
+            error: function (err) {
+                alert("품목 등록 실패" + err);
+                //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+            }
+        });
+    }
+
+    function prod_modify() {
+        if (confirm("수정 하시겠습니까?")) {
+            var mCode = document.getElementById('modal-code').textContent;
+            var mName = document.getElementById('modal-name').value;
+            var mType = document.getElementById('modal-type').value;
+            if (mName != "" && mType != "") {
+                $.ajax({
+                    url: '/Product/ModifyProduct', //request 보낼 서버의 경로
+                    dataType: 'json',
+                    method: 'post', // 메소드(get, post, put 등)
+                    data: {
+                        Code: mCode,
+                        Name: mName,
+                        Type: mType
+                    }, //보낼 데이터
+                    success: function (data) {
+                        alert("수정 완료");
+                        closeModal();
+                        updateTable('/Product/GetProductList');
+                    },
+                    error: function (err) {
+                        alert("품목 수정 실패");
+                        //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+                    }
+                });
+            }
+        }
+    }
+    function prod_delete() {
+        if (confirm("삭제 하시겠습니까?")) {
+            var mCode = document.getElementById('modal-code').textContent;
+            $.ajax({
+                url: '/Product/DeleteProduct', //request 보낼 서버의 경로
+                dataType: 'json',
+                method: 'post', // 메소드(get, post, put 등)
+                data: {
+                    Code: mCode
+                }, //보낼 데이터
+                success: function (data) {
+                    alert("삭제 완료");
+                    closeModal();
+                    updateTable('/Product/GetProductList');
+                },
+                error: function (err) {
+                    alert("품목 삭제 실패" + err);
+                    //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+                }
+            });
+        }
+    }
+    // 모달 열기
+    function openModal(code, name, type) {
+        var modalCode = document.getElementById("modal-code");
+        var modalName = document.getElementById("modal-name");
+        var modalType = document.getElementById("modal-type");
+
+        modalCode.textContent = code;
+        modalName.value = name;
+        modalType.value = type;
+
+        var modal = document.getElementById("modal");
+        modal.style.display = "block";
+    }
+
+    // 모달 닫기
+    function closeModal() {
+        var modal = document.getElementById("modal");
+        modal.style.display = "none";
+    }
+
+    // 각 행의 하이퍼링크 클릭 이벤트 처리
+    var hyperlinks = document.getElementsByClassName("open-modal");
+    for (var i = 0; i < hyperlinks.length; i++) {
+        hyperlinks[i].addEventListener("click", function (event) {
+            event.preventDefault(); // 기본 동작 방지
+
+            var code = this.getAttribute("data-id");
+            var name = this.getAttribute("data-name");
+            var type = this.getAttribute("data-type");
+
+            openModal(code, name, type);
+        });
+    }
+
+    // 모달 닫기 버튼 클릭 이벤트 처리
+    var closeModalButton = document.getElementById("close-modal-button");
+    closeModalButton.addEventListener("click", closeModal);
+</script>

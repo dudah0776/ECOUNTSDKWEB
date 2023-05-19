@@ -1,0 +1,92 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>재고</h2>
+<label>품목 코드: </label>
+<input id="pCodeSearch" />
+<label>날짜</label>
+<input type="date" id="date" />
+<br />
+<button id="inventoryRead" onclick="inventory_read()">조회</button>
+
+<div id="tableContainer">
+    <table id="inventable" border="1" width="50%">
+        <thead>
+            <tr align="center">
+                <th>품목코드</th>
+                <th>품목명</th>
+                <th>수량</th>
+            </tr>
+        </thead>
+        <tbody id="inventableBody">
+            @foreach (var item in ViewBag.inventorylist)
+            {
+                <tr align="center">
+                    <td>@item.Product.Code</td>
+                    <td>@item.Product.Name</td>
+                    <td>@item.Quantity</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<script>
+    function updateTable(url) {
+        $.ajax({
+            url: url, // 서버의 액션 메서드 경로
+            type: 'GET',
+            success: function (response) {
+                changeTable(response);
+            },
+            error: function (xhr, status, error) {
+                console.error(error);
+            }
+        });
+    }
+
+    function changeTable(productList) {
+        var tableBody = document.getElementById("inventableBody");
+        tableBody.innerHTML = "";
+        productList.forEach(function (item) {
+            var row = tableBody.insertRow();
+            var CodeCell = row.insertCell();
+            var NameCell = row.insertCell();
+            var quantityCell = row.insertCell();
+
+            CodeCell.textContent = item.Product.Code;
+            NameCell.textContent = item.Product.Name;
+            quantityCell.textContent = item.Quantity;
+
+        });
+    }
+
+    function inventory_read() {
+        var code = document.getElementById("pCodeSearch").value;
+        var dateField = document.getElementById("date");
+        var selectedDate = dateField.value;
+        console.log(code);
+        if (selectedDate) {
+            var formattedDate = new Date(selectedDate).toISOString().split('T')[0];
+            var data = {
+                'date': formattedDate,
+                'code': code
+            };
+            $.ajax({
+                url: '/Inventory/GetRead', //request 보낼 서버의 경로
+                dataType: 'json',
+                method: 'post', // 메소드(get, post, put 등)
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                success: function (response) {
+                    changeTable(response);
+                },
+                error: function (err) {
+                    alert("조회 실패" + err);
+                    //서버로부터 응답이 정상적으로 처리되지 못햇을 때 실행
+                }
+            });
+        }
+    }
+</script>
