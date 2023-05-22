@@ -14,7 +14,7 @@ namespace EcountSDK
 
         public SqlConnectHelper()
         {
-            this.connectString = "Server=10.10.9.241,25111;Database=ACCT_AC;uid=ecountdev;Pwd=acct@0000;";
+            this.connectString = "**********************************";
         }
         public SqlConnectHelper(string connectString)
         {
